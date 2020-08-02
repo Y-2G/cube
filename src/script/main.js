@@ -1,5 +1,13 @@
+let mode = false;
+let clickX = 0;
+let clickY = 0;
+let moveX = 0;
+let moveY = 0;
 
 const init = () => {
+    const button = document.querySelector('.cube__button');
+    button.addEventListener('click', () => mode = !mode);
+
     // レンダラーを作成する
     const renderer = createRenderer();
 
@@ -21,19 +29,37 @@ const init = () => {
     scene.add(directionallight);
     scene.add(ambientLight);
 
+    // TODO: 分離する
+    document.addEventListener('mousedown', event => {
+        clickX = event.pageX;
+        clickY = event.pageY;
+    
+        document.addEventListener('mousemove', mouseMove, false);
+    });
+
+    document.addEventListener('mouseup', event => {
+        document.removeEventListener('mousemove', mouseMove, false);
+    });
+
     tick();
 
+    // 毎フレーム時に実行されるループイベント
     function tick() {
-      requestAnimationFrame(tick);
-  
-      // 箱を回転させる
-      box.rotation.x += 0.01;
-      box.rotation.y += 0.01;
-  
-      // レンダリング
-      renderer.render(scene, camera);
-    }
-  
+        // マウスの位置に応じてオブジェクトを回転
+        // イージングの公式を用いて滑らかにする
+        box.rotation.x = (moveY - clickY) * 0.02;
+        box.rotation.y = (moveX - clickX) * 0.02;
+
+        // レンダリング
+        renderer.render(scene, camera);
+      
+        requestAnimationFrame(tick);
+      }
+}
+
+const mouseMove = (event) => {
+    moveX = event.pageX;
+    moveY = event.pageY;
 }
 
 // レンダラーを作成する
@@ -90,7 +116,7 @@ const createBox = () => {
     return new THREE.Mesh(geometry, material);
 }
 
-// ライトを作成する
+// 平行光源を作成する
 const createDirectionalLight = () => {
     const color = 0xffffff;
     const light = new THREE.DirectionalLight(color);
@@ -106,7 +132,7 @@ const createDirectionalLight = () => {
     return light;
 }
 
-// ライトを作成する
+// 環境光源を作成する
 const createAmbientLight = () => {
     const color = 0xffffff;
     const light = new THREE.AmbientLight(color);
@@ -122,7 +148,8 @@ const createAmbientLight = () => {
     return light;
 }
 
- window.addEventListener("DOMContentLoaded", init);
+window.addEventListener("DOMContentLoaded", init);
+
 
 // window.addEventListener('resize', onResize);
 // function onResize() {

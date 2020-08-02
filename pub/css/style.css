@@ -2,3 +2,10 @@ body {
   margin: 0;
   overflow: hidden;
 }
+
+.cube__button {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  cursor: pointer;
+}
