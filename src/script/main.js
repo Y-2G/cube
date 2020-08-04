@@ -31,6 +31,8 @@ const init = () => {
     // カメラを作成する
     const camera = createCamera();
 
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    console.log(controls)
     // 立方体を作成する
     const box = createBox();
     
@@ -57,9 +59,7 @@ const init = () => {
         // マウスの位置に応じてオブジェクトを回転
         // イージングの公式を用いて滑らかにする
         if(mode === 'controle') {
-
-            box.rotation.x = 0;
-            box.rotation.y = 0;
+            controls.enableRotate = false;
 
             // レイキャストを作成する
             raycaster.setFromCamera(mouse, camera);
@@ -97,26 +97,26 @@ const init = () => {
                         test.rotation.y = box.rotation.y;
                     }
                 }
-                console.log(test)
 
                 renderer.render(scene, camera);
 
-                for(const item of targetGroup) {
-                    if(direction === 'horizontal') {
-                        item.rotation.x += Math.PI / 2;
-                    }
+                console.log(targetGroup);
 
-                    if(direction === 'vertical') {
-                        item.rotation.y += Math.PI / 2;;
-                    }
+                for(const item of targetGroup) {
                     group.add(item);
+                    // if(direction === 'horizontal') {
+                    //     item.rotation.x += Math.PI / 2;
+                    // }
+
+                    // if(direction === 'vertical') {
+                    //     item.rotation.y += Math.PI / 2;
+                    // }
                 }
 
                 return;
             }
         } else {
-            box.rotation.x = (moveY - clickY) * 0.02;
-            box.rotation.y = (moveX - clickX) * 0.02;
+            controls.enableRotate = true;
         }
     
         // レンダリング
