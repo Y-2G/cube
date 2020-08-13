@@ -138,7 +138,7 @@
                 // レンダーのあと元のグループに戻したい
                 this.meshList.forEach(e => {
                     e.matrixAutoUpdate = false;
-                    e.matrixWorld.fromArray(e.matrixWorld.elements);
+                    e.matrix.fromArray(e.matrixWorld.elements);
                     this.scene.add(e);
                 });
 
