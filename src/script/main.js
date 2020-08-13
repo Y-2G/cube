@@ -11,11 +11,13 @@ const canvas = document.querySelector('#canvas');
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 const group = new THREE.Group();
-const test = new THREE.Group();
+// const test = new THREE.Group();
 const meshManager = new MeshManager();
 
 mouse.x = -1;
 mouse.y = -1;
+
+let test2;
 
 const init = () => {
     document.querySelector('#button').addEventListener('click', () => {
@@ -32,7 +34,7 @@ const init = () => {
     const camera = createCamera();
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    console.log(controls)
+    
     // 立方体を作成する
     const box = createBox();
     
@@ -42,7 +44,7 @@ const init = () => {
 
     // シーンに追加する
     scene.add(box);
-    scene.add(test);
+    // scene.add(test);
     scene.add(directionallight);
     scene.add(ambientLight);
 
@@ -61,6 +63,9 @@ const init = () => {
         if(mode === 'controle') {
             controls.enableRotate = false;
 
+            const test = new THREE.Group();
+            scene.add(test);
+
             // レイキャストを作成する
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(scene.children, true);
@@ -70,23 +75,23 @@ const init = () => {
 
                 const targetGroup = [];
                 let direction = '';
-                let distance = { x: 0, y: 0 };
+                let distance = 0;
 
                 if(Math.abs(moveX - clickX) > 50) {
                     direction = 'horizontal';
-                    distance.x = moveX < clickX ? Math.PI / 2 : Math.PI / 2 * -1; 
+                    distance = moveX > clickX ? Math.PI / 2 : Math.PI / 2 * -1; 
                 }
 
                 if(Math.abs(moveY - clickY) > 50) {
                     direction = 'vertical';
-                    distance.y = moveY < clickY ? Math.PI / 2 : Math.PI / 2 * -1; 
+                    distance = moveY > clickY ? Math.PI / 2 : Math.PI / 2 * -1; 
                 }
 
                 for(const item of list) {
                     if(item.name !== direction) continue;
                     item.list.forEach(e => targetGroup.push(e));
                     item.list.forEach(e => test.add(e));
-
+    
                     if(direction === 'horizontal') {
                         test.rotation.x = box.rotation.x;
                         test.rotation.y = (moveX - clickX) * 0.02;
@@ -96,22 +101,20 @@ const init = () => {
                         test.rotation.x = (moveY - clickY) * 0.02;
                         test.rotation.y = box.rotation.y;
                     }
+
+                    test.matrixAutoUpdate = false;
+                    test.updateMatrix(true) 
                 }
+
+                targetGroup.forEach( function(mesh) {
+                    console.log(test)
+                    group.add(mesh);
+                    mesh.applyMatrix4( test.matrix );
+                    mesh.rotation.y = box.rotation.y;
+
+                });
 
                 renderer.render(scene, camera);
-
-                console.log(targetGroup);
-
-                for(const item of targetGroup) {
-                    group.add(item);
-                    // if(direction === 'horizontal') {
-                    //     item.rotation.x += Math.PI / 2;
-                    // }
-
-                    // if(direction === 'vertical') {
-                    //     item.rotation.y += Math.PI / 2;
-                    // }
-                }
 
                 return;
             }
@@ -213,29 +216,21 @@ const createBox = () => {
             for(let k = 0; k < 3; k++) {
                 // 立方体を作成
                 const geometry = new THREE.BoxGeometry(width, height, depth);
-
-                // const materials = [
-                //     new THREE.MeshStandardMaterial({color: 0x00ff00}),
-                //     new THREE.MeshStandardMaterial({color: 0x00ff00}),
-                //     new THREE.MeshStandardMaterial({color: 0x0000ff}),
-                //     new THREE.MeshStandardMaterial({color: 0x0000ff}),
-                //     new THREE.MeshStandardMaterial({color: 0xff0000}),
-                //     new THREE.MeshStandardMaterial({color: 0xff0000})
-                // ];
-
+                
                 const loader = new THREE.TextureLoader();
 
                 // マテリアルにテクスチャーを設定
                 const material = [
-                    new THREE.MeshStandardMaterial({map: loader.load('../img/white.jpg')}),
-                    new THREE.MeshStandardMaterial({map: loader.load('../img/yellow.jpg')}),
                     new THREE.MeshStandardMaterial({map: loader.load('../img/red.jpg')}),
-                    new THREE.MeshStandardMaterial({map: loader.load('../img/green.jpg')}),
+                    new THREE.MeshStandardMaterial({map: loader.load('../img/orange.jpg')}),
+                    new THREE.MeshStandardMaterial({map: loader.load('../img/yellow.jpg')}),
+                    new THREE.MeshStandardMaterial({map: loader.load('../img/white.jpg')}),
                     new THREE.MeshStandardMaterial({map: loader.load('../img/blue.jpg')}),
-                    new THREE.MeshStandardMaterial({map: loader.load('../img/orange.jpg')})
+                    new THREE.MeshStandardMaterial({map: loader.load('../img/green.jpg')})
                 ];
               
                 const mesh = new THREE.Mesh(geometry, material);
+
                 group.add(mesh);
 
                 if(i === 0) {
