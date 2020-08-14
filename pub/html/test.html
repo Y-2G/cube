@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r119/three.min.js"></script>
+    <script src="../script/three/OrbitControls.js"></script>
 </head>
 <body>
     <canvas id="canvas"></canvas>
+    <button id="button" class=cube__button>モードチェンジ</button>
     <script>
         window.addEventListener('load', init);
 
@@ -26,10 +29,15 @@
                 this.renderer = null;
                 this.scene = null;
                 this.camera = null;
-                this.test = new Array();
+                this.mode = 'control';
+                this.controls = null;
             }
 
             init() {
+                document.querySelector('#button').addEventListener('click', () => {
+                    this.mode = this.mode === 'control' ? 'camera' : 'control';
+                });
+
                 // レンダラー
                 this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
 
@@ -48,6 +56,7 @@
                 const renderStopdist = 10000;
                 this.camera = new THREE.PerspectiveCamera(angle, aspect, renderStartdist, renderStopdist);
                 this.camera.position.set(0, 0, +1000);
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
 
                 // 平行光源
                 const light = new THREE.AmbientLight(0xffffff);
@@ -58,7 +67,7 @@
                 const meshHeight = 100;
                 const meshDepth  = 100;
 
-                for(let i = 0; i < 3; i++) {
+                for(let i = 0; i < 27; i++) {
                     const geometry = new THREE.BoxGeometry(meshWidth, meshHeight, meshDepth);
 
                     const material = [
@@ -70,10 +79,14 @@
                         new THREE.MeshStandardMaterial({color: 0xffffff})
                     ];
 
-                    const mesh = new THREE.Mesh(geometry, material);
-                    mesh.position.set((- meshWidth) + i * meshWidth, 0, 0);
-                    mesh.name = `mesh${i}`;
+                    const x = (- meshWidth) + (i % 3) * meshWidth;
+                    const y = (meshHeight)  - (Math.floor(i / 3) % 3) * meshHeight;
+                    const z = (- meshDepth) + (Math.floor(i / 9) % 3) * meshDepth;
 
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.name = `mesh${i}`;
+                    mesh.position.set(x, y, z);
+                    
                     this.meshList.push(mesh);
                 }
 
@@ -90,23 +103,67 @@
             tick() {
                 requestAnimationFrame(this.tick.bind(this));
 
+                if(this.mode === 'camera') {
+                    this.controls.enableRotate = true;
+                    this.renderer.render(this.scene, this.camera);
+
+                    return;
+                }
+
+                this.controls.enableRotate = false;
+
                 const mouse = new THREE.Vector2();
-                mouse.x = ( this.click.start.x / window.innerWidth ) * 2 - 1;
-                mouse.y = - ( this.click.start.y / window.innerHeight ) * 2 + 1;
+                mouse.x =   (this.click.start.x / window.innerWidth) * 2 - 1;
+                mouse.y = - (this.click.start.y / window.innerHeight) * 2 + 1;
 
                 this.raycaster.setFromCamera(mouse, this.camera);
 
                 const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+                if(intersects.length < 1) return this.renderer.render(this.scene, this.camera);
 
                 // ドラッグされた時オブジェクトをグループ化して回転する
                 const moveX = this.click.start.x - this.click.current.x;
                 const moveY = this.click.start.y - this.click.current.y;
 
-                if(intersects.length > 0) {
-                    const tmpGroup = new THREE.Group();
-                    this.scene.add(tmpGroup);
-                    this.meshList.forEach(e => tmpGroup.add(e));
+                const tmpGroup = new THREE.Group();
+                this.scene.add(tmpGroup);
+
+                const target = intersects[0].object;
+                
+                this.meshList.forEach(e => {
+                    // 12: x軸
+                    // 13: y軸
+                    if(Math.abs(moveY) > 30) {
+                        const diff = e.matrix.elements[12] - target.matrix.elements[12] 
+                        if(Math.abs(diff) < 5) {
+                            tmpGroup.add(e)
+                        }
+                    }
+
+                    if(Math.abs(moveX) > 30) {
+                        const diff = e.matrix.elements[13] - target.matrix.elements[13] 
+                        if(Math.abs(diff) < 5) {
+                            tmpGroup.add(e)
+                        }
+                    }
+                });
+
+                // tmpGroup.rotation.y = moveX * 0.02;
+                if(Math.abs(moveX) > 30) {
                     tmpGroup.rotation.y = moveX * 0.02;
+                }
+                if(Math.abs(moveY) > 30) {
+                    tmpGroup.rotation.x = moveY * 0.02;
+                }
+
+                this.renderer.render(this.scene, this.camera);
+
+                if(Math.abs(moveX) > 30) {
+                    tmpGroup.rotation.y = Math.PI / 2;
+                }
+
+                if(Math.abs(moveY) > 30) {
+                    tmpGroup.rotation.x = Math.PI / 2;
                 }
 
                 this.renderer.render(this.scene, this.camera);
@@ -135,11 +192,11 @@
                 this.click.current.x = 0;
                 this.click.current.y = 0;
 
-                // レンダーのあと元のグループに戻したい
                 this.meshList.forEach(e => {
                     e.matrixAutoUpdate = false;
                     e.matrix.fromArray(e.matrixWorld.elements);
                     this.scene.add(e);
+                    console.log(e.name, e.matrix.elements)
                 });
 
                 this.renderer.render(this.scene, this.camera);
