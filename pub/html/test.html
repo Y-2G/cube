@@ -40,6 +40,7 @@
 
                 // レンダラー
                 this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
+                this.renderer.setClearColor( 0xffffff, 1);
 
                 const rendererWidth = window.innerWidth;
                 const rendererHeight = window.innerHeight;
@@ -70,13 +71,16 @@
                 for(let i = 0; i < 27; i++) {
                     const geometry = new THREE.BoxGeometry(meshWidth, meshHeight, meshDepth);
 
+                    const loader = new THREE.TextureLoader();
+
+                    // マテリアルにテクスチャーを設定
                     const material = [
-                        new THREE.MeshStandardMaterial({color: 0xf44336}),
-                        new THREE.MeshStandardMaterial({color: 0x2196f3}),
-                        new THREE.MeshStandardMaterial({color: 0x4caf50}),
-                        new THREE.MeshStandardMaterial({color: 0xffeb3B}),
-                        new THREE.MeshStandardMaterial({color: 0xffc107}),
-                        new THREE.MeshStandardMaterial({color: 0xffffff})
+                        new THREE.MeshStandardMaterial({map: loader.load('../img/red.jpg')}),
+                        new THREE.MeshStandardMaterial({map: loader.load('../img/orange.jpg')}),
+                        new THREE.MeshStandardMaterial({map: loader.load('../img/yellow.jpg')}),
+                        new THREE.MeshStandardMaterial({map: loader.load('../img/white.jpg')}),
+                        new THREE.MeshStandardMaterial({map: loader.load('../img/blue.jpg')}),
+                        new THREE.MeshStandardMaterial({map: loader.load('../img/green.jpg')})
                     ];
 
                     const x = (- meshWidth) + (i % 3) * meshWidth;
@@ -117,16 +121,19 @@
                 mouse.y = - (this.click.start.y / window.innerHeight) * 2 + 1;
 
                 this.raycaster.setFromCamera(mouse, this.camera);
-
                 const intersects = this.raycaster.intersectObjects(this.scene.children, true);
-                if(intersects.length < 1) return this.renderer.render(this.scene, this.camera);
+                
+                if(intersects.length < 1) {
+                    this.renderer.render(this.scene, this.camera);
+                    return;
+                }
 
                 // ドラッグされた時オブジェクトをグループ化して回転する
                 const moveX = this.click.start.x - this.click.current.x;
                 const moveY = this.click.start.y - this.click.current.y;
 
-                const tmpGroup = new THREE.Group();
-                this.scene.add(tmpGroup);
+                this.tmpGroup = new THREE.Group();
+                this.scene.add(this.tmpGroup);
 
                 const target = intersects[0].object;
                 
@@ -136,34 +143,24 @@
                     if(Math.abs(moveY) > 30) {
                         const diff = e.matrix.elements[12] - target.matrix.elements[12] 
                         if(Math.abs(diff) < 5) {
-                            tmpGroup.add(e)
+                            this.tmpGroup.add(e)
                         }
                     }
 
                     if(Math.abs(moveX) > 30) {
                         const diff = e.matrix.elements[13] - target.matrix.elements[13] 
                         if(Math.abs(diff) < 5) {
-                            tmpGroup.add(e)
+                            this.tmpGroup.add(e)
                         }
                     }
                 });
 
-                // tmpGroup.rotation.y = moveX * 0.02;
                 if(Math.abs(moveX) > 30) {
-                    tmpGroup.rotation.y = moveX * 0.02;
-                }
-                if(Math.abs(moveY) > 30) {
-                    tmpGroup.rotation.x = moveY * 0.02;
-                }
-
-                this.renderer.render(this.scene, this.camera);
-
-                if(Math.abs(moveX) > 30) {
-                    tmpGroup.rotation.y = Math.PI / 2;
+                    this.tmpGroup.rotation.y = - moveX * 0.02;
                 }
 
                 if(Math.abs(moveY) > 30) {
-                    tmpGroup.rotation.x = Math.PI / 2;
+                    this.tmpGroup.rotation.x = - moveY * 0.02;
                 }
 
                 this.renderer.render(this.scene, this.camera);
@@ -187,19 +184,35 @@
             mouseUp() {
                 document.removeEventListener('mousemove', this.mouseMove.bind(this), false);
 
+                const moveX = this.click.start.x - this.click.current.x;
+                const moveY = this.click.start.y - this.click.current.y;
+
+                if(Math.abs(moveX) > 30) {
+                    const direction = moveX < 0 ? 1 : -1;
+                    this.tmpGroup.rotation.y = Math.PI / 2 * direction;
+                }
+
+                if(Math.abs(moveY) > 30) {
+                    const direction = moveY < 0 ? 1 : -1;
+                    this.tmpGroup.rotation.x = Math.PI / 2 * direction;;
+                }
+
+                this.renderer.render(this.scene, this.camera);
+                this.meshList.forEach(e => {
+                    e.matrixAutoUpdate = false;
+                    e.matrix.fromArray(e.matrixWorld.elements);
+                    this.scene.add(e);
+                });
+                
+                this.scene.remove(this.tmpGroup);
+
+                this.renderer.render(this.scene, this.camera);
+
                 this.click.start.x = 0;
                 this.click.start.y = 0;
                 this.click.current.x = 0;
                 this.click.current.y = 0;
 
-                this.meshList.forEach(e => {
-                    e.matrixAutoUpdate = false;
-                    e.matrix.fromArray(e.matrixWorld.elements);
-                    this.scene.add(e);
-                    console.log(e.name, e.matrix.elements)
-                });
-
-                this.renderer.render(this.scene, this.camera);
             }
         }
     </script>
