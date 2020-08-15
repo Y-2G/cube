@@ -31,6 +31,9 @@
                 this.camera = null;
                 this.mode = 'control';
                 this.controls = null;
+                this.tmpGroup = new THREE.Group();
+                this.vecrtor = { x: 0, y: 0 }
+                this.mouseMoveCallback = this.mouseMove.bind(this);
             }
 
             init() {
@@ -40,7 +43,6 @@
 
                 // レンダラー
                 this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
-                this.renderer.setClearColor( 0xffffff, 1);
 
                 const rendererWidth = window.innerWidth;
                 const rendererHeight = window.innerHeight;
@@ -132,43 +134,39 @@
                 const moveX = this.click.start.x - this.click.current.x;
                 const moveY = this.click.start.y - this.click.current.y;
 
-                this.tmpGroup = new THREE.Group();
-                this.scene.add(this.tmpGroup);
+                if(this.tmpGroup.children.length === 0) {
+                    const target = intersects[0].object;
+                    this.tmpGroup = new THREE.Group();
+                    this.scene.add(this.tmpGroup);
 
-                const target = intersects[0].object;
-                
-                this.meshList.forEach(e => {
-                    // 12: x軸
-                    // 13: y軸
-                    if(Math.abs(moveY) > 30) {
-                        const diff = e.matrix.elements[12] - target.matrix.elements[12] 
-                        if(Math.abs(diff) < 5) {
-                            this.tmpGroup.add(e)
+                    for(const e of this.meshList) {
+                        // 12: x軸 13: y軸
+                        if(this.vecrtor.x !== 0) {
+                            const diff = e.matrix.elements[13] - target.matrix.elements[13];
+                            if(Math.abs(diff) < 5) {
+                                this.tmpGroup.add(e);
+                            }
                         }
-                    }
 
-                    if(Math.abs(moveX) > 30) {
-                        const diff = e.matrix.elements[13] - target.matrix.elements[13] 
-                        if(Math.abs(diff) < 5) {
-                            this.tmpGroup.add(e)
+                        if(this.vecrtor.y !== 0) {
+                            const diff = e.matrix.elements[12] - target.matrix.elements[12];
+                            if(Math.abs(diff) < 5) {
+                                this.tmpGroup.add(e);
+                            }
                         }
-                    }
-                });
 
-                if(Math.abs(moveX) > 30) {
-                    this.tmpGroup.rotation.y = - moveX * 0.02;
+                    }
                 }
 
-                if(Math.abs(moveY) > 30) {
-                    this.tmpGroup.rotation.x = - moveY * 0.02;
-                }
-
+                this.tmpGroup.rotation.x = - this.vecrtor.y * 0.02;
+                this.tmpGroup.rotation.y = - this.vecrtor.x * 0.02;
                 this.renderer.render(this.scene, this.camera);
+
             }
 
 
             mouseDown(event) {
-                document.addEventListener('mousemove', this.mouseMove.bind(this), false);
+                document.addEventListener('mousemove', this.mouseMoveCallback, false);
 
                 this.click.start.x = event.pageX;
                 this.click.start.y = event.pageY;
@@ -179,39 +177,53 @@
             mouseMove(event) {
                 this.click.current.x = event.pageX;
                 this.click.current.y = event.pageY;
-            }
-
-            mouseUp() {
-                document.removeEventListener('mousemove', this.mouseMove.bind(this), false);
 
                 const moveX = this.click.start.x - this.click.current.x;
                 const moveY = this.click.start.y - this.click.current.y;
 
-                if(Math.abs(moveX) > 30) {
-                    const direction = moveX < 0 ? 1 : -1;
-                    this.tmpGroup.rotation.y = Math.PI / 2 * direction;
-                }
-
-                if(Math.abs(moveY) > 30) {
-                    const direction = moveY < 0 ? 1 : -1;
-                    this.tmpGroup.rotation.x = Math.PI / 2 * direction;;
-                }
-
-                this.renderer.render(this.scene, this.camera);
-                this.meshList.forEach(e => {
-                    e.matrixAutoUpdate = false;
-                    e.matrix.fromArray(e.matrixWorld.elements);
-                    this.scene.add(e);
-                });
+                console.log('test1', this.vecrtor)
+                if(Math.abs(moveX) > 30 && this.vecrtor.y === 0) {
+                    this.vecrtor = { x: moveX, y: 0 }
+                    return;
+                } 
                 
-                this.scene.remove(this.tmpGroup);
+                if(Math.abs(moveY) > 30 && this.vecrtor.x === 0) {
+                    this.vecrtor = { x: 0, y: moveY }
+                    return;
+                }
+            }
 
-                this.renderer.render(this.scene, this.camera);
+            mouseUp() {
+                document.removeEventListener('mousemove', this.mouseMoveCallback, false);
 
                 this.click.start.x = 0;
                 this.click.start.y = 0;
                 this.click.current.x = 0;
                 this.click.current.y = 0;
+
+                if (this.vecrtor.x !== 0) {
+                    const direction = this.vecrtor.x < 0 ? 1 : -1
+                    this.tmpGroup.rotation.y = Math.PI / 2 * direction;
+                }
+
+                if(this.vecrtor.y !== 0) {
+                    const direction = this.vecrtor.x < 0 ? 1 : -1
+                    this.tmpGroup.rotation.x = Math.PI / 2 * direction;
+                }
+
+                this.renderer.render(this.scene, this.camera);
+
+                for(const e of this.meshList) {
+                    e.matrixAutoUpdate = false;
+                    e.matrix.fromArray(e.matrixWorld.elements);
+                    this.scene.add(e);
+                }
+
+                this.scene.remove(this.tmpGroup);
+                this.vecrtor = { x: 0, y: 0 }
+                console.log('test2', this.vecrtor)
+
+                this.renderer.render(this.scene, this.camera);
 
             }
         }
