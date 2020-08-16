@@ -1,332 +1,215 @@
-import {MeshList} from './mesh-list.js';
-import {MeshManager} from './mesh-manager.js';
+window.addEventListener('load', init);
 
-let mode = 'controle';
-let clickX = 0;
-let clickY = 0;
-let moveX = 0;
-let moveY = 0;
+function init() {
+    const main = new Main();
+    main.init();
+}
 
-const canvas = document.querySelector('#canvas');
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-const group = new THREE.Group();
-// const test = new THREE.Group();
-const meshManager = new MeshManager();
+class Main {
+    constructor() {
+        this.renderer = null;
+        this.scene = null;
+        this.camera = null;
+        this.controls = null;
+        this.raycaster = new THREE.Raycaster();
+        this.group = new THREE.Group();
+        this.vecrtor = { x: 0, y: 0 }
+        this.mode = 'control';
+        this.canvas = document.querySelector('#canvas');
+        this.click = new Object();
+        this.click.start = new THREE.Vector2();
+        this.click.current  = new THREE.Vector2();
+        this.meshList = new Array();
+        this.mouseMoveCallback = this.mouseMove.bind(this);
+    }
 
-mouse.x = -1;
-mouse.y = -1;
+    init() {
+        document.querySelector('#button').addEventListener('click', () => {
+            this.mode = this.mode === 'control' ? 'camera' : 'control';
+        });
 
-let test2;
+        // レンダラー
+        this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
 
-const init = () => {
-    document.querySelector('#button').addEventListener('click', () => {
-        mode = mode === 'controle' ? 'view' : 'controle';
-    });
+        const rendererWidth = window.innerWidth;
+        const rendererHeight = window.innerHeight;
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setSize(rendererWidth, rendererHeight);
 
-    // レンダラーを作成する
-    const renderer = createRenderer();
+        // シーン
+        this.scene = new THREE.Scene();
 
-    // シーンを作成する
-    const scene = createScene();
+        // カメラ
+        const angle = 45;
+        const aspect = rendererWidth / rendererHeight;
+        const renderStartdist = 1;
+        const renderStopdist = 10000;
+        this.camera = new THREE.PerspectiveCamera(angle, aspect, renderStartdist, renderStopdist);
+        this.camera.position.set(0, 0, +1000);
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
 
-    // カメラを作成する
-    const camera = createCamera();
+        // 平行光源
+        const light = new THREE.AmbientLight(0xffffff);
+        light.position.set(1, 1, 1);
 
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    
-    // 立方体を作成する
-    const box = createBox();
-    
-    // ライトを作成する
-    const directionallight = createDirectionalLight();
-    const ambientLight = createAmbientLight();
+        // オブジェクト
+        const meshWidth  = 100;
+        const meshHeight = 100;
+        const meshDepth  = 100;
 
-    // シーンに追加する
-    scene.add(box);
-    // scene.add(test);
-    scene.add(directionallight);
-    scene.add(ambientLight);
+        for(let i = 0; i < 27; i++) {
+            const geometry = new THREE.BoxGeometry(meshWidth, meshHeight, meshDepth);
 
-    // TODO: スマホ用イベントを追加する
-    canvas.addEventListener('mousedown', mouseDown);
-    canvas.addEventListener('mouseup', mouseUp);
-   
-    tick();
+            const loader = new THREE.TextureLoader();
 
-    // 毎フレーム時に実行されるループイベント
-    function tick() {
-        requestAnimationFrame(tick);
+            // マテリアルにテクスチャーを設定
+            const material = [
+                new THREE.MeshStandardMaterial({map: loader.load('../img/red.jpg')}),
+                new THREE.MeshStandardMaterial({map: loader.load('../img/orange.jpg')}),
+                new THREE.MeshStandardMaterial({map: loader.load('../img/yellow.jpg')}),
+                new THREE.MeshStandardMaterial({map: loader.load('../img/white.jpg')}),
+                new THREE.MeshStandardMaterial({map: loader.load('../img/blue.jpg')}),
+                new THREE.MeshStandardMaterial({map: loader.load('../img/green.jpg')})
+            ];
 
-        // マウスの位置に応じてオブジェクトを回転
-        // イージングの公式を用いて滑らかにする
-        if(mode === 'controle') {
-            controls.enableRotate = false;
+            const x = (- meshWidth) + (i % 3) * meshWidth;
+            const y = (meshHeight)  - (Math.floor(i / 3) % 3) * meshHeight;
+            const z = (- meshDepth) + (Math.floor(i / 9) % 3) * meshDepth;
 
-            const test = new THREE.Group();
-            scene.add(test);
-
-            // レイキャストを作成する
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(scene.children, true);
-
-            if(intersects.length > 0) {
-                const list = meshManager.getMeshGroup(intersects[0].object);
-
-                const targetGroup = [];
-                let direction = '';
-                let distance = 0;
-
-                if(Math.abs(moveX - clickX) > 50) {
-                    direction = 'horizontal';
-                    distance = moveX > clickX ? Math.PI / 2 : Math.PI / 2 * -1; 
-                }
-
-                if(Math.abs(moveY - clickY) > 50) {
-                    direction = 'vertical';
-                    distance = moveY > clickY ? Math.PI / 2 : Math.PI / 2 * -1; 
-                }
-
-                for(const item of list) {
-                    if(item.name !== direction) continue;
-                    item.list.forEach(e => targetGroup.push(e));
-                    item.list.forEach(e => test.add(e));
-    
-                    if(direction === 'horizontal') {
-                        test.rotation.x = box.rotation.x;
-                        test.rotation.y = (moveX - clickX) * 0.02;
-                    }
-
-                    if(direction === 'vertical') {
-                        test.rotation.x = (moveY - clickY) * 0.02;
-                        test.rotation.y = box.rotation.y;
-                    }
-
-                    test.matrixAutoUpdate = false;
-                    test.updateMatrix(true) 
-                }
-
-                targetGroup.forEach( function(mesh) {
-                    console.log(test)
-                    group.add(mesh);
-                    mesh.applyMatrix4( test.matrix );
-                    mesh.rotation.y = box.rotation.y;
-
-                });
-
-                renderer.render(scene, camera);
-
-                return;
-            }
-        } else {
-            controls.enableRotate = true;
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.name = `mesh${i}`;
+            mesh.position.set(x, y, z);
+            
+            this.meshList.push(mesh);
         }
-    
-        // レンダリング
-        renderer.render(scene, camera);
+
+        this.meshList.forEach(e => this.scene.add(e));
+        this.scene.add(this.group);
+        this.scene.add(light);
+
+        document.addEventListener('mousedown', this.mouseDown.bind(this));
+        document.addEventListener('mouseup', this.mouseUp.bind(this));
+
+        this.tick();
     }
-}
 
-const mouseDown = (event) => {
-    moveX = 0;
-    moveY = 0;
-    clickX = event.pageX;
-    clickY = event.pageY;
+    tick() {
+        requestAnimationFrame(this.tick.bind(this));
 
-    canvas.addEventListener('mousemove', mouseMove, false);
-}
+        if(this.mode === 'camera') {
+            this.controls.enableRotate = true;
+            this.renderer.render(this.scene, this.camera);
 
-const mouseMove = (event) => {
-    if(mode === 'controle') {
-        mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-        mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-    }
-    moveX = event.pageX;
-    moveY = event.pageY;
-}
+            return;
+        }
 
-const mouseUp = () => {
-    mouse.x = -1;
-    mouse.y = -1;
+        this.controls.enableRotate = false;
 
-    canvas.removeEventListener('mousemove', mouseMove, false);
-}
+        const mouse = new THREE.Vector2();
+        mouse.x =   (this.click.start.x / window.innerWidth) * 2 - 1;
+        mouse.y = - (this.click.start.y / window.innerHeight) * 2 + 1;
 
-// レンダラーを作成する
-const createRenderer = () => {
-    const renderer = new THREE.WebGLRenderer({
-        canvas: document.querySelector("#canvas")
-    });
+        this.raycaster.setFromCamera(mouse, this.camera);
+        const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+        
+        if(intersects.length < 1) {
+            this.renderer.render(this.scene, this.camera);
+            return;
+        }
 
-    // TODO: 分離する
+        // ドラッグされた時オブジェクトをグループ化して回転する
+        const moveX = this.click.start.x - this.click.current.x;
+        const moveY = this.click.start.y - this.click.current.y;
 
-    // サイズを取得
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-
-    // レンダラーのサイズを調整する
-    renderer.setPixelRatio(window.devicePixelRatio);　// 設定しないとスマホでぼやける
-    renderer.setSize(width, height);
-
-    return renderer;
-}
-
-const createScene = () => {
-    return new THREE.Scene();
-}
-
-// カメラを作成する
-const createCamera = () => {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-
-    const angle = 45;
-    const aspect = width / height;
-    const renderStartdist = 1;
-    const renderStopdist = 10000;
-
-    const camera = new THREE.PerspectiveCamera(angle, aspect, renderStartdist, renderStopdist);
-    camera.position.set(0, 0, +1000);
-    
-    return camera;
-}
-
-// 立方体を作成する
-const createBox = () => {
-    const width = 100;
-    const height = 100;
-    const depth = 100;
-
-    const list1 = new MeshList('vertical');
-    const list2 = new MeshList('vertical');
-    const list3 = new MeshList('vertical');
-    const list4 = new MeshList('horizontal');
-    const list5 = new MeshList('horizontal');
-    const list6 = new MeshList('horizontal');
-    meshManager.add(list1);
-    meshManager.add(list2);
-    meshManager.add(list3);
-    meshManager.add(list4);
-    meshManager.add(list5);
-    meshManager.add(list6);
-
-    // TODO: 簡潔にする
-    for(let i = 0; i < 3; i++) {
-        for(let j = 0; j < 3; j++) {
-            for(let k = 0; k < 3; k++) {
-                // 立方体を作成
-                const geometry = new THREE.BoxGeometry(width, height, depth);
-                
-                const loader = new THREE.TextureLoader();
-
-                // マテリアルにテクスチャーを設定
-                const material = [
-                    new THREE.MeshStandardMaterial({map: loader.load('../img/red.jpg')}),
-                    new THREE.MeshStandardMaterial({map: loader.load('../img/orange.jpg')}),
-                    new THREE.MeshStandardMaterial({map: loader.load('../img/yellow.jpg')}),
-                    new THREE.MeshStandardMaterial({map: loader.load('../img/white.jpg')}),
-                    new THREE.MeshStandardMaterial({map: loader.load('../img/blue.jpg')}),
-                    new THREE.MeshStandardMaterial({map: loader.load('../img/green.jpg')})
-                ];
-              
-                const mesh = new THREE.Mesh(geometry, material);
-
-                group.add(mesh);
-
-                if(i === 0) {
-                    mesh.position.z = width * - 1 ;
-                } 
-
-                if(i === 1){
-                    mesh.position.z = 0;
-                } 
-
-                if(i === 2){
-                    mesh.position.z = width;
+        if(this.group.children.length === 0) {
+            const target = intersects[0].object;
+            this.group = new THREE.Group();
+            this.scene.add(this.group);
+            for(const e of this.meshList) {
+                // 12: x軸 13: y軸
+                if(this.vecrtor.x !== 0) {
+                    this.camera.position.x 
+                    const diff = e.matrix.elements[13] - target.matrix.elements[13];
+                    if(Math.abs(diff) < 5) {
+                        this.group.add(e);
+                    }
                 }
 
-                if(j === 0) {
-                    mesh.position.y = height * -1;
-                    list4.add(mesh);
-                }
-                
-                if(j === 1){
-                    mesh.position.y = 0;
-                    list5.add(mesh);
-                }
-                
-                if(j === 2){
-                    mesh.position.y = height;
-                    list6.add(mesh);
-                }
-
-                if(k === 0) {
-                    mesh.position.x = depth * - 1;
-                    list1.add(mesh);
-                } 
-
-                if(k === 1){
-                    mesh.position.x = 0;
-                    list2.add(mesh);
-                }
-                
-                if(k === 2){
-                    mesh.position.x = depth;
-                    list3.add(mesh);
+                if(this.vecrtor.y !== 0) {
+                    const diff = e.matrix.elements[12] - target.matrix.elements[12];
+                    if(Math.abs(diff) < 5) {
+                        this.group.add(e);
+                    }
                 }
             }
         }
+
+        const direction = this.camera.position.z < 0 ? 1 : -1;
+        this.group.rotation.x = this.vecrtor.y * 0.02 * direction;
+        this.group.rotation.y = this.vecrtor.x * 0.02 * direction;
+
+        this.renderer.render(this.scene, this.camera);
     }
 
-    return group;
+
+    mouseDown(event) {
+        document.addEventListener('mousemove', this.mouseMoveCallback, false);
+
+        this.click.start.x = event.pageX;
+        this.click.start.y = event.pageY;
+        this.click.current.x = event.pageX;
+        this.click.current.y = event.pageY;
+    }
+
+    mouseMove(event) {
+        this.click.current.x = event.pageX;
+        this.click.current.y = event.pageY;
+
+        const moveX = this.click.start.x - this.click.current.x;
+        const moveY = this.click.start.y - this.click.current.y;
+
+        if(Math.abs(moveX) > 50 && this.vecrtor.y === 0) {
+            this.vecrtor = { x: moveX, y: 0 }
+            return;
+        } 
+        
+        if(Math.abs(moveY) > 50 && this.vecrtor.x === 0) {
+            this.vecrtor = { x: 0, y: moveY }
+            return;
+        }
+    }
+
+    mouseUp() {
+        document.removeEventListener('mousemove', this.mouseMoveCallback, false);
+
+        this.click.start.x = 0;
+        this.click.start.y = 0;
+        this.click.current.x = 0;
+        this.click.current.y = 0;
+
+        if (this.vecrtor.x !== 0) {
+            let direction = this.vecrtor.x < 0 ? 1 : -1;
+            direction *= this.camera.position.z < 0 ? -1 : 1;
+            this.group.rotation.y = Math.PI / 2 * direction;
+        }
+
+        if(this.vecrtor.y !== 0) {
+            let direction = this.vecrtor.y < 0 ? 1 : -1;
+            direction *= this.camera.position.z < 0 ? -1 : 1;
+            this.group.rotation.x = Math.PI / 2 * direction;
+        }
+
+        this.renderer.render(this.scene, this.camera);
+
+        for(const e of this.meshList) {
+            e.matrixAutoUpdate = false;
+            e.matrix.fromArray(e.matrixWorld.elements);
+            this.scene.add(e);
+        }
+
+        this.scene.remove(this.group);
+        this.vecrtor = { x: 0, y: 0 }
+
+        this.renderer.render(this.scene, this.camera);
+    }
 }
-
-// 平行光源を作成する
-const createDirectionalLight = () => {
-    const color = 0xffffff;
-    const light = new THREE.DirectionalLight(color);
-
-    // TODO: 分離する
-
-    // 光の強さを2倍にする
-    light.intensity = 2;
-
-    // ライトの位置を変更
-    light.position.set(1, 1, 1);
-
-    return light;
-}
-
-// 環境光源を作成する
-const createAmbientLight = () => {
-    const color = 0xffffff;
-    const light = new THREE.AmbientLight(color);
-
-    // TODO: 分離する
-
-    // 光の強さを2倍にする
-    light.intensity = 0.5;
-
-    // ライトの位置を変更
-    light.position.set(1, 1, 1);
-
-    return light;
-}
-
-window.addEventListener("DOMContentLoaded", init);
-
-
-// window.addEventListener('resize', onResize);
-// function onResize() {
-//   // サイズを取得
-//   const width = window.innerWidth;
-//   const height = window.innerHeight;
-
-//   // レンダラーのサイズを調整する
-//   renderer.setPixelRatio(window.devicePixelRatio);
-//   renderer.setSize(width, height);
-
-//   // カメラのアスペクト比を正す
-//   camera.aspect = width / height;
-//   camera.updateProjectionMatrix();
-// }
