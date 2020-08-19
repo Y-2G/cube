@@ -4,6 +4,11 @@ function init() {
     const main = new Main();
     main.init();
 }
+class Test {
+    constructor() {
+        this.children = new Array
+    }
+}
 
 class Main {
     constructor() {
@@ -13,7 +18,7 @@ class Main {
         this.controls = null;
         this.raycaster = new THREE.Raycaster();
         this.group = new THREE.Group();
-        this.vecrtor = { x: 0, y: 0 }
+        this.vecrtor = { x: 0, y: 0, z: 0 }
         this.mode = 'control';
         this.canvas = document.querySelector('#canvas');
         this.click = new Object();
@@ -79,7 +84,7 @@ class Main {
             const mesh = new THREE.Mesh(geometry, material);
             mesh.name = `mesh${i}`;
             mesh.position.set(x, y, z);
-            
+
             this.meshList.push(mesh);
         }
 
@@ -111,42 +116,130 @@ class Main {
 
         this.raycaster.setFromCamera(mouse, this.camera);
         const intersects = this.raycaster.intersectObjects(this.scene.children, true);
-        
+
         if(intersects.length < 1) {
             this.renderer.render(this.scene, this.camera);
             return;
         }
 
-        // ドラッグされた時オブジェクトをグループ化して回転する
-        const moveX = this.click.start.x - this.click.current.x;
-        const moveY = this.click.start.y - this.click.current.y;
-
         if(this.group.children.length === 0) {
             const target = intersects[0].object;
             this.group = new THREE.Group();
             this.scene.add(this.group);
+
+            const point = intersects[0].point;
+            console.log(point)
+
             for(const e of this.meshList) {
-                // 12: x軸 13: y軸
+                const vec = new THREE.Vector3();
+                const pos = e.getWorldPosition(vec)
                 if(this.vecrtor.x !== 0) {
-                    this.camera.position.x 
-                    const diff = e.matrix.elements[13] - target.matrix.elements[13];
-                    if(Math.abs(diff) < 5) {
-                        this.group.add(e);
+
+                    // 立方体の中心y座標 - 立方体の高さ / 2
+                    const minY = (pos.y - 50);
+
+                    // 立方体の中心y座標 + 立方体の高さ / 2
+                    const maxY = (pos.y + 50);
+
+                    // 立方体の中心y座標 - 立方体の高さ / 2
+                    const minZ = (pos.z - 50);
+
+                    // 立方体の中心y座標 + 立方体の高さ / 2
+                    const maxZ = (pos.z + 50);
+
+                    // クリック座標が立方体に含まれる時、グループに追加する
+                    if(Math.abs(point.z) > 145) {
+                        if(point.y > minY && point.y < maxY) {
+                            this.test = 'x'
+                            this.group.add(e);
+                        }
+                    } else {
+                        if(Math.abs(point.x) > 145) {
+                            if(point.y > minY && point.y < maxY) {
+                                this.test = 'x'
+                                this.group.add(e);
+                            }
+                        }
+                        if(Math.abs(point.y) > 145) {
+                            if(point.z > minZ && point.z < maxZ) {
+                                this.test = 'xz'
+                                this.group.add(e);
+                            }
+                        }
                     }
+
+                    // const diff = e.matrix.elements[13] - target.matrix.elements[13];
+                    // if(Math.abs(diff) < 5) {
+                    //     this.group.add(e);
+                    // }
                 }
 
                 if(this.vecrtor.y !== 0) {
-                    const diff = e.matrix.elements[12] - target.matrix.elements[12];
-                    if(Math.abs(diff) < 5) {
-                        this.group.add(e);
+                    // 立方体の中心y座標 - 立方体の高さ / 2
+                    const minX = (pos.x - 50);
+
+                    // 立方体の中心y座標 + 立方体の高さ / 2
+                    const maxX = (pos.x + 50);
+
+                    // 立方体の中心y座標 - 立方体の高さ / 2
+                    const minZ = (pos.z - 50);
+
+                    // 立方体の中心y座標 + 立方体の高さ / 2
+                    const maxZ = (pos.z + 50);
+
+                    // クリック座標が立方体に含まれる時、グループに追加する
+                    // if(Math.abs(point.z) < 145) {
+                    //     if(point.z > minZ && point.z < maxZ) {
+                    //         this.test = 'yz'
+                    //         this.group.add(e);
+                    //     }
+                    // } else {
+                    //     if(point.x > minX && point.x < maxX) {
+                    //         this.group.add(e);
+                    //     }
+                    // }
+
+                    // クリック座標が立方体に含まれる時、グループに追加する
+                    if(Math.abs(point.z) > 145) {
+                        if(point.x > minX && point.x < maxX) {
+                            this.test = 'y'
+                            this.group.add(e);
+                        }
+                    } else {
+                        if(Math.abs(point.y) > 145) {
+                            if(point.x > minX && point.x < maxX) {
+                                this.test = 'y'
+                                this.group.add(e);
+                            }
+                        }
+                        if(Math.abs(point.x) > 145) {
+                            if(point.z > minZ && point.z < maxZ) {
+                                this.test = 'yz'
+                                this.group.add(e);
+                            }
+                        }
                     }
+
+                    // const diff = e.matrix.elements[12] - target.matrix.elements[12];
+                    // if(Math.abs(diff) < 5) {
+                    //     this.group.add(e);
+                    // }
                 }
             }
-        }
 
-        const direction = this.camera.position.z < 0 ? 1 : -1;
-        this.group.rotation.x = this.vecrtor.y * 0.02 * direction;
-        this.group.rotation.y = this.vecrtor.x * 0.02 * direction;
+            const direction = this.camera.position.z < 0 ? 1 : -1;
+            if(this.test === 'x') {
+                this.group.rotation.x = this.vecrtor.y * 0.02 * direction;
+                this.group.rotation.y = this.vecrtor.x * 0.02 * direction;
+            } else if(this.test === 'y') {
+                this.group.rotation.x = this.vecrtor.y * 0.02 * direction;
+                this.group.rotation.y = this.vecrtor.x * 0.02 * direction;
+            } else if(this.test === 'xz') {
+                this.group.rotation.z = this.vecrtor.x * 0.02 * direction;
+            } else if(this.test === 'yz') {
+                this.group.rotation.z = this.vecrtor.y * 0.02 * direction;
+            }
+        }
 
         this.renderer.render(this.scene, this.camera);
     }
@@ -168,13 +261,13 @@ class Main {
         const moveX = this.click.start.x - this.click.current.x;
         const moveY = this.click.start.y - this.click.current.y;
 
-        if(Math.abs(moveX) > 50 && this.vecrtor.y === 0) {
-            this.vecrtor = { x: moveX, y: 0 }
+        if(Math.abs(moveX) > 30 && this.vecrtor.y === 0) {
+            this.vecrtor = { x: moveX, y: 0, z: 0 }
             return;
-        } 
-        
-        if(Math.abs(moveY) > 50 && this.vecrtor.x === 0) {
-            this.vecrtor = { x: 0, y: moveY }
+        }
+
+        if(Math.abs(moveY) > 30 && this.vecrtor.x === 0) {
+            this.vecrtor = { x: 0, y: moveY, z: 0 }
             return;
         }
     }
@@ -187,17 +280,36 @@ class Main {
         this.click.current.x = 0;
         this.click.current.y = 0;
 
-        if (this.vecrtor.x !== 0) {
+        if (this.test === 'x' &&  this.vecrtor.x !== 0) {
             let direction = this.vecrtor.x < 0 ? 1 : -1;
             direction *= this.camera.position.z < 0 ? -1 : 1;
             this.group.rotation.y = Math.PI / 2 * direction;
+            console.log('test1')
+
         }
 
-        if(this.vecrtor.y !== 0) {
+        if( this.test === 'y' && this.vecrtor.y !== 0) {
             let direction = this.vecrtor.y < 0 ? 1 : -1;
             direction *= this.camera.position.z < 0 ? -1 : 1;
             this.group.rotation.x = Math.PI / 2 * direction;
+            console.log('test2')
         }
+
+        if(this.test === 'xz' && this.vecrtor.x !== 0) {
+            let direction = this.vecrtor.x < 0 ? 1 : -1;
+            this.group.rotation.z = Math.PI / 2 * direction;
+            console.log('test3')
+        }
+
+        if(this.test === 'yz' && this.vecrtor.y !== 0) {
+            let direction = this.vecrtor.y < 0 ? 1 : -1;
+            direction *= this.camera.position.z < 0 ? -1 : 1;
+            this.group.rotation.z = Math.PI / 2 * direction;
+            console.log('test4')
+
+        }
+
+        this.test = ''
 
         this.renderer.render(this.scene, this.camera);
 
@@ -207,8 +319,11 @@ class Main {
             this.scene.add(e);
         }
 
+        // console.log(this.camera.position)
+        // console.log(this.targetGroup)
+
         this.scene.remove(this.group);
-        this.vecrtor = { x: 0, y: 0 }
+        this.vecrtor = { x: 0, y: 0, z: 0 }
 
         this.renderer.render(this.scene, this.camera);
     }
