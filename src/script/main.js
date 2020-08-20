@@ -4,11 +4,6 @@ function init() {
     const main = new Main();
     main.init();
 }
-class Test {
-    constructor() {
-        this.children = new Array
-    }
-}
 
 class Main {
     constructor() {
@@ -115,38 +110,43 @@ class Main {
         mouse.y = - (this.click.start.y / window.innerHeight) * 2 + 1;
 
         this.raycaster.setFromCamera(mouse, this.camera);
-        const intersects = this.raycaster.intersectObjects(this.scene.children, true);
+        this.intersects = this.raycaster.intersectObjects(this.scene.children, true);
 
-        if(intersects.length < 1) {
+        if(this.intersects.length < 1) {
             this.renderer.render(this.scene, this.camera);
             return;
         }
 
         if(this.group.children.length === 0) {
-            const target = intersects[0].object;
             this.group = new THREE.Group();
             this.scene.add(this.group);
 
-            const point = intersects[0].point;
-            console.log(point)
+            const point = this.intersects[0].point;
+            // console.log(point)
 
             for(const e of this.meshList) {
                 const vec = new THREE.Vector3();
                 const pos = e.getWorldPosition(vec)
+
+                // 立方体の中心y座標 - 立方体の高さ / 2
+                const minX = (pos.x - 50);
+
+                // 立方体の中心y座標 + 立方体の高さ / 2
+                const maxX = (pos.x + 50);
+                
+                // 立方体の中心y座標 - 立方体の高さ / 2
+                const minY = (pos.y - 50);
+
+                // 立方体の中心y座標 + 立方体の高さ / 2
+                const maxY = (pos.y + 50);
+
+                // 立方体の中心y座標 - 立方体の高さ / 2
+                const minZ = (pos.z - 50);
+
+                // 立方体の中心y座標 + 立方体の高さ / 2
+                const maxZ = (pos.z + 50);
+                
                 if(this.vecrtor.x !== 0) {
-
-                    // 立方体の中心y座標 - 立方体の高さ / 2
-                    const minY = (pos.y - 50);
-
-                    // 立方体の中心y座標 + 立方体の高さ / 2
-                    const maxY = (pos.y + 50);
-
-                    // 立方体の中心y座標 - 立方体の高さ / 2
-                    const minZ = (pos.z - 50);
-
-                    // 立方体の中心y座標 + 立方体の高さ / 2
-                    const maxZ = (pos.z + 50);
-
                     // クリック座標が立方体に含まれる時、グループに追加する
                     if(Math.abs(point.z) > 145) {
                         if(point.y > minY && point.y < maxY) {
@@ -167,38 +167,9 @@ class Main {
                             }
                         }
                     }
-
-                    // const diff = e.matrix.elements[13] - target.matrix.elements[13];
-                    // if(Math.abs(diff) < 5) {
-                    //     this.group.add(e);
-                    // }
                 }
 
                 if(this.vecrtor.y !== 0) {
-                    // 立方体の中心y座標 - 立方体の高さ / 2
-                    const minX = (pos.x - 50);
-
-                    // 立方体の中心y座標 + 立方体の高さ / 2
-                    const maxX = (pos.x + 50);
-
-                    // 立方体の中心y座標 - 立方体の高さ / 2
-                    const minZ = (pos.z - 50);
-
-                    // 立方体の中心y座標 + 立方体の高さ / 2
-                    const maxZ = (pos.z + 50);
-
-                    // クリック座標が立方体に含まれる時、グループに追加する
-                    // if(Math.abs(point.z) < 145) {
-                    //     if(point.z > minZ && point.z < maxZ) {
-                    //         this.test = 'yz'
-                    //         this.group.add(e);
-                    //     }
-                    // } else {
-                    //     if(point.x > minX && point.x < maxX) {
-                    //         this.group.add(e);
-                    //     }
-                    // }
-
                     // クリック座標が立方体に含まれる時、グループに追加する
                     if(Math.abs(point.z) > 145) {
                         if(point.x > minX && point.x < maxX) {
@@ -219,25 +190,19 @@ class Main {
                             }
                         }
                     }
-
-                    // const diff = e.matrix.elements[12] - target.matrix.elements[12];
-                    // if(Math.abs(diff) < 5) {
-                    //     this.group.add(e);
-                    // }
                 }
             }
 
-            const direction = this.camera.position.z < 0 ? 1 : -1;
             if(this.test === 'x') {
-                this.group.rotation.x = this.vecrtor.y * 0.02 * direction;
-                this.group.rotation.y = this.vecrtor.x * 0.02 * direction;
+                this.group.rotation.y = this.vecrtor.x * 0.02;
             } else if(this.test === 'y') {
-                this.group.rotation.x = this.vecrtor.y * 0.02 * direction;
-                this.group.rotation.y = this.vecrtor.x * 0.02 * direction;
+                this.group.rotation.x = this.vecrtor.y * 0.02;
             } else if(this.test === 'xz') {
+                const direction = point.y > 0 ? -1 : 1
                 this.group.rotation.z = this.vecrtor.x * 0.02 * direction;
             } else if(this.test === 'yz') {
-                this.group.rotation.z = this.vecrtor.y * 0.02 * direction;
+                const direction = point.x > 0 ? -1 : 1
+                this.group.rotation.z = this.vecrtor.y * 0.02  * direction;
             }
         }
 
@@ -257,9 +222,9 @@ class Main {
     mouseMove(event) {
         this.click.current.x = event.pageX;
         this.click.current.y = event.pageY;
-
-        const moveX = this.click.start.x - this.click.current.x;
-        const moveY = this.click.start.y - this.click.current.y;
+        
+        const moveX = this.click.current.x - this.click.start.x;
+        const moveY = this.click.current.y - this.click.start.y;
 
         if(Math.abs(moveX) > 30 && this.vecrtor.y === 0) {
             this.vecrtor = { x: moveX, y: 0, z: 0 }
@@ -281,36 +246,34 @@ class Main {
         this.click.current.y = 0;
 
         if (this.test === 'x' &&  this.vecrtor.x !== 0) {
-            let direction = this.vecrtor.x < 0 ? 1 : -1;
-            direction *= this.camera.position.z < 0 ? -1 : 1;
+            let direction = this.vecrtor.x > 0 ? 1 : -1;
             this.group.rotation.y = Math.PI / 2 * direction;
             console.log('test1')
-
         }
 
         if( this.test === 'y' && this.vecrtor.y !== 0) {
-            let direction = this.vecrtor.y < 0 ? 1 : -1;
-            direction *= this.camera.position.z < 0 ? -1 : 1;
+            let direction = this.vecrtor.y > 0 ? 1 : -1;
+            direction *= this.camera.position.z > 0 ? 1 : -1;
             this.group.rotation.x = Math.PI / 2 * direction;
-            console.log('test2')
+            console.log('test2', this.camera.position)
         }
 
         if(this.test === 'xz' && this.vecrtor.x !== 0) {
             let direction = this.vecrtor.x < 0 ? 1 : -1;
+            direction *= this.camera.position.z > 0 ? 1 : -1;
+            direction *= this.camera.position.y > 0 ? 1 : -1;
             this.group.rotation.z = Math.PI / 2 * direction;
             console.log('test3')
         }
 
         if(this.test === 'yz' && this.vecrtor.y !== 0) {
             let direction = this.vecrtor.y < 0 ? 1 : -1;
-            direction *= this.camera.position.z < 0 ? -1 : 1;
+            direction *= this.camera.position.x > 0 ? 1 : -1;
             this.group.rotation.z = Math.PI / 2 * direction;
             console.log('test4')
-
         }
 
         this.test = ''
-
         this.renderer.render(this.scene, this.camera);
 
         for(const e of this.meshList) {
@@ -319,8 +282,7 @@ class Main {
             this.scene.add(e);
         }
 
-        // console.log(this.camera.position)
-        // console.log(this.targetGroup)
+        console.log(this.camera.position)
 
         this.scene.remove(this.group);
         this.vecrtor = { x: 0, y: 0, z: 0 }
