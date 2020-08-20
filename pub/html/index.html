@@ -2,12 +2,21 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" type="text/css" href="../css/style.css">
+    <link href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r119/three.min.js"></script>
     <script src="../script/three/OrbitControls.js"></script>
 </head>
 <body>
     <canvas id="canvas"></canvas>
-    <button id="button" class=cube__button>モードチェンジ</button>
+    <label id="button" class="cube__button" for="checkbox">
+        <input type="checkbox" id="checkbox" class="cube__check" style="display: none;">
+        <div  class="cube__icon--hand">
+            <i class="far fa-hand-paper fa-2x"></i>
+        </div>
+        <div  class="cube__icon--eye">
+            <i class="far fa-eye fa-2x"></i>
+        </div>
+    </label>
     <script src="../script/app.js"></script>
 </body>
 </html>

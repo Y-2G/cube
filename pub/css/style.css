@@ -1,11 +1,57 @@
-body {
+html, body {
+  width: 100%;
+  height: 100%;
   margin: 0;
+  padding: 0;
+}
+
+body {
   overflow: hidden;
 }
 
 .cube__button {
+  width: 65px;
+  height: 65px;
   position: absolute;
   bottom: 24px;
   right: 24px;
   cursor: pointer;
+}
+
+.cube__icon--hand {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 1px solid #000;
+  border-radius: 100%;
+  background: #fff;
+  opacity: 0;
+}
+
+.cube__icon--eye {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  border: 1px solid #000;
+  border-radius: 100%;
+  background: #fff;
+  opacity: 1;
+}
+
+.cube__check:checked ~ .cube__icon--hand {
+  opacity: 1;
+}
+
+.cube__check:checked ~ .cube__icon--eye {
+  opacity: 0;
 }

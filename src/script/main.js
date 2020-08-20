@@ -24,7 +24,7 @@ class Main {
     }
 
     init() {
-        document.querySelector('#button').addEventListener('click', () => {
+        document.querySelector('#checkbox').addEventListener('click', () => {
             this.mode = this.mode === 'control' ? 'camera' : 'control';
         });
 
@@ -128,41 +128,33 @@ class Main {
                 const vec = new THREE.Vector3();
                 const pos = e.getWorldPosition(vec)
 
-                // 立方体の中心y座標 - 立方体の高さ / 2
+                // 立方体の中心とサイズ(半分)から最小値と最大値を計算
                 const minX = (pos.x - 50);
-
-                // 立方体の中心y座標 + 立方体の高さ / 2
                 const maxX = (pos.x + 50);
-                
-                // 立方体の中心y座標 - 立方体の高さ / 2
-                const minY = (pos.y - 50);
 
-                // 立方体の中心y座標 + 立方体の高さ / 2
+                const minY = (pos.y - 50);
                 const maxY = (pos.y + 50);
 
-                // 立方体の中心y座標 - 立方体の高さ / 2
                 const minZ = (pos.z - 50);
-
-                // 立方体の中心y座標 + 立方体の高さ / 2
                 const maxZ = (pos.z + 50);
                 
                 if(this.vecrtor.x !== 0) {
                     // クリック座標が立方体に含まれる時、グループに追加する
                     if(Math.abs(point.z) > 145) {
                         if(point.y > minY && point.y < maxY) {
-                            this.test = 'x'
+                            this.rotation = 'x'
                             this.group.add(e);
                         }
                     } else {
                         if(Math.abs(point.x) > 145) {
                             if(point.y > minY && point.y < maxY) {
-                                this.test = 'x'
+                                this.rotation = 'x'
                                 this.group.add(e);
                             }
                         }
                         if(Math.abs(point.y) > 145) {
                             if(point.z > minZ && point.z < maxZ) {
-                                this.test = 'xz'
+                                this.rotation = 'xz'
                                 this.group.add(e);
                             }
                         }
@@ -173,19 +165,19 @@ class Main {
                     // クリック座標が立方体に含まれる時、グループに追加する
                     if(Math.abs(point.z) > 145) {
                         if(point.x > minX && point.x < maxX) {
-                            this.test = 'y'
+                            this.rotation = 'y'
                             this.group.add(e);
                         }
                     } else {
                         if(Math.abs(point.y) > 145) {
                             if(point.x > minX && point.x < maxX) {
-                                this.test = 'y'
+                                this.rotation = 'y'
                                 this.group.add(e);
                             }
                         }
                         if(Math.abs(point.x) > 145) {
                             if(point.z > minZ && point.z < maxZ) {
-                                this.test = 'yz'
+                                this.rotation = 'yz'
                                 this.group.add(e);
                             }
                         }
@@ -193,14 +185,15 @@ class Main {
                 }
             }
 
-            if(this.test === 'x') {
+            // TODO: カメラの角度によって回転の方向が変わる問題に対応する
+            if(this.rotation === 'x') {
                 this.group.rotation.y = this.vecrtor.x * 0.02;
-            } else if(this.test === 'y') {
+            } else if(this.rotation === 'y') {
                 this.group.rotation.x = this.vecrtor.y * 0.02;
-            } else if(this.test === 'xz') {
+            } else if(this.rotation === 'xz') {
                 const direction = point.y > 0 ? -1 : 1
                 this.group.rotation.z = this.vecrtor.x * 0.02 * direction;
-            } else if(this.test === 'yz') {
+            } else if(this.rotation === 'yz') {
                 const direction = point.x > 0 ? -1 : 1
                 this.group.rotation.z = this.vecrtor.y * 0.02  * direction;
             }
@@ -240,40 +233,32 @@ class Main {
     mouseUp() {
         document.removeEventListener('mousemove', this.mouseMoveCallback, false);
 
-        this.click.start.x = 0;
-        this.click.start.y = 0;
-        this.click.current.x = 0;
-        this.click.current.y = 0;
-
-        if (this.test === 'x' &&  this.vecrtor.x !== 0) {
+        // TODO: カメラの角度によって回転の方向が変わる問題に対応する
+        if (this.rotation === 'x' &&  this.vecrtor.x !== 0) {
             let direction = this.vecrtor.x > 0 ? 1 : -1;
             this.group.rotation.y = Math.PI / 2 * direction;
-            console.log('test1')
         }
 
-        if( this.test === 'y' && this.vecrtor.y !== 0) {
+        if( this.rotation === 'y' && this.vecrtor.y !== 0) {
             let direction = this.vecrtor.y > 0 ? 1 : -1;
             direction *= this.camera.position.z > 0 ? 1 : -1;
             this.group.rotation.x = Math.PI / 2 * direction;
-            console.log('test2', this.camera.position)
         }
 
-        if(this.test === 'xz' && this.vecrtor.x !== 0) {
+        if(this.rotation === 'xz' && this.vecrtor.x !== 0) {
             let direction = this.vecrtor.x < 0 ? 1 : -1;
             direction *= this.camera.position.z > 0 ? 1 : -1;
             direction *= this.camera.position.y > 0 ? 1 : -1;
             this.group.rotation.z = Math.PI / 2 * direction;
-            console.log('test3')
         }
 
-        if(this.test === 'yz' && this.vecrtor.y !== 0) {
+        if(this.rotation === 'yz' && this.vecrtor.y !== 0) {
             let direction = this.vecrtor.y < 0 ? 1 : -1;
             direction *= this.camera.position.x > 0 ? 1 : -1;
             this.group.rotation.z = Math.PI / 2 * direction;
-            console.log('test4')
         }
 
-        this.test = ''
+        this.rotation = ''
         this.renderer.render(this.scene, this.camera);
 
         for(const e of this.meshList) {
@@ -282,11 +267,14 @@ class Main {
             this.scene.add(e);
         }
 
-        console.log(this.camera.position)
-
         this.scene.remove(this.group);
         this.vecrtor = { x: 0, y: 0, z: 0 }
 
         this.renderer.render(this.scene, this.camera);
+
+        this.click.start.x = 0;
+        this.click.start.y = 0;
+        this.click.current.x = 0;
+        this.click.current.y = 0;
     }
 }
