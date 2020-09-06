@@ -1,4 +1,5 @@
 window.addEventListener('load', init);
+window.addEventListener('resize', init);
 
 function init() {
     const main = new Main();
@@ -12,14 +13,13 @@ class Main {
         this.camera = null;
         this.controls = null;
         this.group = new THREE.Group();
-        this.vecrtor = { x: 0, y: 0, z: 0 };
         this.mode = 'control';
-        this.canvas = document.querySelector('#canvas');
         this.click = new Object();
         this.click.start = new THREE.Vector2();
         this.click.current  = new THREE.Vector2();
         this.meshList = new Array();
         this.mouseMoveCallback = this.mouseMove.bind(this);
+        this.requestId = null;
     }
 
     init() {
@@ -28,7 +28,7 @@ class Main {
         });
 
         // レンダラー
-        this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
+        this.renderer = new THREE.WebGLRenderer({ canvas: document.querySelector('#canvas') });
 
         const rendererWidth = window.innerWidth;
         const rendererHeight = window.innerHeight;
@@ -44,7 +44,7 @@ class Main {
         const renderStartdist = 1;
         const renderStopdist = 10000;
         this.camera = new THREE.PerspectiveCamera(angle, aspect, renderStartdist, renderStopdist);
-        this.camera.position.set(800, 500, +1000);
+        this.camera.position.set(500, 500, 1000);
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
 
         // 平行光源
@@ -109,47 +109,35 @@ class Main {
 
         this.renderer.render(this.scene, this.camera);
     }
-    
+
     mouseDown(event) {
         document.addEventListener('mousemove', this.mouseMoveCallback, false);
 
         this.click.start.x = event.pageX;
         this.click.start.y = event.pageY;
-        this.click.current.x = event.pageX;
-        this.click.current.y = event.pageY;
     }
 
     mouseMove(event) {
         this.click.current.x = event.pageX;
         this.click.current.y = event.pageY;
         
-        const moveX = this.click.current.x - this.click.start.x;
-        const moveY = this.click.current.y - this.click.start.y;
-        
-        this.vecrtor.x = moveX;
-        this.vecrtor.y = moveY;
-
         this.createGroup();
     }
 
     mouseUp() {
         document.removeEventListener('mousemove', this.mouseMoveCallback, false);
 
+        if(this.group.children.length === 9) {
+            this.decideDirection();
+            this.executeRotation();
+        } else {
+            this.resetRotation(); 
+        }
+
         this.click.start.x = 0;
         this.click.start.y = 0;
         this.click.current.x = 0;
         this.click.current.y = 0;
-
-        if(this.group.children.length !== 9) {
-            for(const e of this.meshList) {
-                this.scene.attach(e);
-            }
-
-            return;
-        }
-
-        this.decideRotationDirection();
-        this.executeRotate();
     }
 
     createGroup() {
@@ -157,24 +145,26 @@ class Main {
         mouse.x =   (this.click.current.x / window.innerWidth ) * 2 - 1;
         mouse.y = - (this.click.current.y / window.innerHeight) * 2 + 1;
 
-        const ray1 = new THREE.Raycaster();
-        ray1.setFromCamera(mouse, this.camera);
-        const intersects1 = ray1.intersectObjects(this.scene.children, true);
+        const ray = new THREE.Raycaster();
 
-        if(intersects1.length === 0) return;
+        ray.setFromCamera(mouse, this.camera);
+        let intersects = ray.intersectObjects(this.scene.children, true);
 
-        const object = intersects1[0].object;
-        const point = intersects1[0].point.clone();
+        if(intersects.length === 0) return;
+
+        const object = intersects[0].object;
+        const point = intersects[0].point.clone();
 
         // クリックした面の法線ベクトルを取得する
-        const face  = intersects1[0].face.normal.clone();
+        const face  = intersects[0].face.normal.clone();
         
         // オブジェクトに合わせて回転させる
+        // これを行わないと法線ベクトルが常に初期の方向をむいてしまう
         face.applyQuaternion(object.quaternion);
 
-        const ray = new THREE.Raycaster();
+        // クリックした点から逆方向に伸びる光線を作って交差を取得する
         ray.set(point, face.negate());
-        const intersects = ray.intersectObjects(this.scene.children, true);
+        intersects = ray.intersectObjects(this.scene.children, true);
 
         if(intersects.length === 0) return;
 
@@ -184,7 +174,7 @@ class Main {
         }
     }
 
-    decideRotationDirection() {
+    decideDirection() {
         const base = this.group.children[0].position;
         
         const checkX = [];
@@ -198,46 +188,46 @@ class Main {
         }
 
         if(checkX.includes(false) === false) {
-            return this.rotationDirection = 'y';
+            return this.direction = 'y';
         }
 
         if(checkY.includes(false) === false) {
-            return this.rotationDirection = 'x';
+            return this.direction = 'x';
         }
 
         if(checkZ.includes(false) === false) {
-            return this.rotationDirection = 'z';
+            return this.direction = 'z';
         }
     }
 
-    executeRotate() {
-        const vector = new THREE.Vector3(this.vecrtor.x, this.vecrtor.y, 0);
+    executeRotation() {
+        const moveX = this.click.current.x - this.click.start.x;
+        const moveY = this.click.current.y - this.click.start.y;
+        let adjust = 1;
         
-        if(this.rotationDirection === 'x') {
-            let direction = vector.x > 0 ? 1 : -1;
-            this.rotateX(Math.PI / 2, direction)
+        if(this.direction === 'x') {
+            adjust = moveX > 0 ? 1 : -1;
+            this.rotateX(Math.PI / 2, adjust)
         }
 
-        if(this.rotationDirection === 'y') {
-            let direction = vector.y > 0 ? 1 : -1;
-            direction *= this.camera.position.z > 0 ? 1: -1
-            this.rotateY(Math.PI / 2, direction);
+        if(this.direction === 'y') {
+            adjust = moveY > 0 ? 1 : -1;
+            adjust *= this.camera.position.z > 0 ? 1: -1
+            this.rotateY(Math.PI / 2, adjust);
         }
         
-        if(this.rotationDirection === 'z') {
-            let direction;
-            
-            if(Math.abs(vector.x) > 50) {
-                direction = vector.x < 0 ? 1 : -1;
-                direction *= this.camera.position.y > 0 ? 1: -1;
+        if(this.direction === 'z') {
+            if(Math.abs(moveX) > 50) {
+                adjust = moveX < 0 ? 1 : -1;
+                adjust *= this.camera.position.y > 0 ? 1: -1;
             } 
 
-            if(Math.abs(vector.y) > 50) {
-                direction = vector.y < 0 ? 1 : -1;
-                direction *= this.camera.position.x > 0 ? 1: -1;
+            if(Math.abs(moveY) > 50) {
+                adjust = moveY < 0 ? 1 : -1;
+                adjust *= this.camera.position.x > 0 ? 1: -1;
             }
             
-            this.rotateZ(Math.PI / 2, direction);
+            this.rotateZ(Math.PI / 2, adjust);
         }
     }
 
@@ -245,52 +235,46 @@ class Main {
         if( Math.abs(this.group.rotation.y) >= Math.abs(angle) ) {
             this.group.rotation.y = angle * direction;
             this.renderer.render(this.scene, this.camera);
-            
-            this.rotateFinish(); 
-            
-            return cancelAnimationFrame(this.id);
+            this.resetRotation(); 
+            return cancelAnimationFrame(this.requestId);
         }
 
         this.group.rotation.y += 6 * 0.02 * direction;
 
-        this.id = requestAnimationFrame(this.rotateX.bind(this, angle, direction));
+        this.requestId = requestAnimationFrame(this.rotateX.bind(this, angle, direction));
     }
 
     rotateY(angle, direction) {
         if( Math.abs(this.group.rotation.x) >= Math.abs(angle) ) {
             this.group.rotation.x = angle * direction;
             this.renderer.render(this.scene, this.camera);
-
-            this.rotateFinish(); 
-            return cancelAnimationFrame( this.id );
+            this.resetRotation(); 
+            return cancelAnimationFrame( this.requestId );
         }
 
         this.group.rotation.x += 6 * 0.02 * direction;
 
-        this.id = requestAnimationFrame(this.rotateY.bind(this, angle, direction));
+        this.requestId = requestAnimationFrame(this.rotateY.bind(this, angle, direction));
     }
 
     rotateZ(angle, direction) {
         if( Math.abs(this.group.rotation.z) >= Math.abs(angle) ) {
             this.group.rotation.z = angle * direction;
             this.renderer.render(this.scene, this.camera);
-            
-            this.rotateFinish(); 
-
-            return cancelAnimationFrame( this.id );
+            this.resetRotation(); 
+            return cancelAnimationFrame( this.requestId );
         }
 
         this.group.rotation.z += 6 * 0.02 * direction;
 
-        this.id = requestAnimationFrame(this.rotateZ.bind(this, angle, direction));
+        this.requestId = requestAnimationFrame(this.rotateZ.bind(this, angle, direction));
     }
 
-    rotateFinish() {
+    resetRotation() {
         for(const e of this.meshList) {
             this.scene.attach(e);
         }
         this.group.rotation.set(0, 0, 0);
-        this.rotationDirection = null;
+        this.direction = null;
     }
-
 }
