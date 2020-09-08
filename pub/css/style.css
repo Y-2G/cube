@@ -18,6 +18,11 @@ body {
   cursor: pointer;
 }
 
+.cube__button:active {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
 .cube__icon--hand {
   display: flex;
   justify-content: center;

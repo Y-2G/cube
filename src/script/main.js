@@ -1,30 +1,44 @@
-window.addEventListener('load', init);
-window.addEventListener('resize', init);
+import { OrbitControls } from './orbit-controls.js';
 
-function init() {
+window.addEventListener('load', load);
+window.addEventListener('resize', resize);
+
+function load() {
     const main = new Main();
     main.init();
 }
 
+function resize() {
+    const main = new Main();
+    main.resize();
+}
+
 class Main {
     constructor() {
-        this.renderer = null;
-        this.scene = null;
-        this.camera = null;
-        this.controls = null;
-        this.group = new THREE.Group();
-        this.mode = 'control';
-        this.click = new Object();
-        this.click.start = new THREE.Vector2();
-        this.click.current  = new THREE.Vector2();
-        this.meshList = new Array();
-        this.mouseMoveCallback = this.mouseMove.bind(this);
+        this.renderer  = null;
+        this.scene     = null;
+        this.camera    = null;
+        this.group     = null;
         this.requestId = null;
+        this.controls  = null;
+        this.mode      = 'control';
+        this.meshList  = new Array();
+        this.clickStart   = new THREE.Vector2();
+        this.clickCurrent = new THREE.Vector2();
+        this.mouseMoveCallback = this.mouseMove.bind(this);
     }
 
     init() {
-        document.querySelector('#checkbox').addEventListener('click', () => {
+        document.querySelector('#button').addEventListener('click', e => {
             this.mode = this.mode === 'control' ? 'camera' : 'control';
+            
+            // イベントを発火させる
+            const checkbox = document.querySelector('#checkbox');
+            const event = document.createEvent( "MouseEvents" );
+            event.initEvent("click", false, true);
+            checkbox.dispatchEvent(event); 
+
+            e.preventDefault();
         });
 
         // レンダラー
@@ -45,11 +59,13 @@ class Main {
         const renderStopdist = 10000;
         this.camera = new THREE.PerspectiveCamera(angle, aspect, renderStartdist, renderStopdist);
         this.camera.position.set(500, 500, 1000);
+        this.camera.lookAt(0, 0, 0)
         this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
 
         // 平行光源
         const light = new THREE.AmbientLight(0xffffff);
         light.position.set(1, 1, 1);
+        this.scene.add(light);
 
         // オブジェクト
         const meshWidth  = 100;
@@ -80,19 +96,23 @@ class Main {
             mesh.position.set(x, y, z);
 
             this.meshList.push(mesh);
+            this.scene.attach(mesh);
         }
 
-        for(const e of this.meshList) {
-            this.scene.attach(e);
-        }
-
+        this.group = new THREE.Group();
         this.scene.attach(this.group);
-        this.scene.add(light);
 
         this.tick();
 
-        document.addEventListener('mousedown', this.mouseDown.bind(this));
-        document.addEventListener('mouseup', this.mouseUp.bind(this));
+        document.addEventListener('mousedown', this.mouseDown.bind(this), false);
+        document.addEventListener('mouseup', this.mouseUp.bind(this), false);
+
+        document.addEventListener('touchstart', this.mouseDown.bind(this), false);
+        document.addEventListener('touchend', this.mouseUp.bind(this), false);
+    }
+
+    resize() {
+        this.init();
     }
 
     tick() {
@@ -106,27 +126,40 @@ class Main {
         }
 
         this.controls.enableRotate = false;
-
         this.renderer.render(this.scene, this.camera);
     }
 
     mouseDown(event) {
-        document.addEventListener('mousemove', this.mouseMoveCallback, false);
+        document.addEventListener('mousemove', this.mouseMoveCallback, {passive: false});
+        document.addEventListener('touchmove', this.mouseMoveCallback, {passive: false});
 
-        this.click.start.x = event.pageX;
-        this.click.start.y = event.pageY;
+        if(!event.changedTouches) {
+            this.clickStart.x = event.pageX;
+            this.clickStart.y = event.pageY;
+        } else {
+            this.clickStart.x = event.changedTouches[0].pageX;
+            this.clickStart.y = event.changedTouches[0].pageY;
+        }
     }
 
     mouseMove(event) {
-        this.click.current.x = event.pageX;
-        this.click.current.y = event.pageY;
+        event.preventDefault();
+
+        if(!event.changedTouches) {
+            this.clickCurrent.x = event.pageX;
+            this.clickCurrent.y = event.pageY;
+        } else {
+            this.clickCurrent.x = event.changedTouches[0].pageX;
+            this.clickCurrent.y = event.changedTouches[0].pageY;
+        }
         
         this.createGroup();
     }
 
     mouseUp() {
-        document.removeEventListener('mousemove', this.mouseMoveCallback, false);
-
+        document.removeEventListener('mousemove', this.mouseMoveCallback, {passive: false});
+        document.removeEventListener('touchmove', this.mouseMoveCallback, {passive: false});
+        
         if(this.group.children.length === 9) {
             this.decideDirection();
             this.executeRotation();
@@ -134,16 +167,16 @@ class Main {
             this.resetRotation(); 
         }
 
-        this.click.start.x = 0;
-        this.click.start.y = 0;
-        this.click.current.x = 0;
-        this.click.current.y = 0;
+        this.clickStart.x = 0;
+        this.clickStart.y = 0;
+        this.clickCurrent.x = 0;
+        this.clickCurrent.y = 0;
     }
 
     createGroup() {
         const mouse = new THREE.Vector2();
-        mouse.x =   (this.click.current.x / window.innerWidth ) * 2 - 1;
-        mouse.y = - (this.click.current.y / window.innerHeight) * 2 + 1;
+        mouse.x =   (this.clickCurrent.x / window.innerWidth ) * 2 - 1;
+        mouse.y = - (this.clickCurrent.y / window.innerHeight) * 2 + 1;
 
         const ray = new THREE.Raycaster();
 
@@ -201,8 +234,8 @@ class Main {
     }
 
     executeRotation() {
-        const moveX = this.click.current.x - this.click.start.x;
-        const moveY = this.click.current.y - this.click.start.y;
+        const moveX = this.clickCurrent.x - this.clickStart.x;
+        const moveY = this.clickCurrent.y - this.clickStart.y;
         let adjust = 1;
         
         if(this.direction === 'x') {

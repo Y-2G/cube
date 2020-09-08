@@ -1,4 +1,5 @@
-console.warn( "THREE.OrbitControls: As part of the transition to ES6 Modules, the files in 'examples/js' were deprecated in May 2020 (r117) and will be deleted in December 2020 (r124). You can find more information about developing using ES6 Modules in https://threejs.org/docs/#manual/en/introduction/Installation." );
+// tsuji: コンソールに出力しないようにコメント化する
+// console.warn( "THREE.OrbitControls: As part of the transition to ES6 Modules, the files in 'examples/js' were deprecated in May 2020 (r117) and will be deleted in December 2020 (r124). You can find more information about developing using ES6 Modules in https://threejs.org/docs/#manual/en/introduction/Installation." );
 
 // This set of controls performs orbiting, dollying (zooming), and panning.
 // Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
@@ -7,7 +8,8 @@ console.warn( "THREE.OrbitControls: As part of the transition to ES6 Modules, th
 //    Zoom - middle mouse, or mousewheel / touch: two-finger spread or squish
 //    Pan - right mouse, or left mouse + ctrl/meta/shiftKey, or arrow keys / touch: two-finger move
 
-THREE.OrbitControls = function ( object, domElement ) {
+// tsuji: バンドルするためにexportする
+export default THREE.OrbitControls = function ( object, domElement ) {
 
 	if ( domElement === undefined ) console.warn( 'THREE.OrbitControls: The second parameter "domElement" is now mandatory.' );
 	if ( domElement === document ) console.error( 'THREE.OrbitControls: "document" should not be used as the target "domElement". Please use "renderer.domElement" instead.' );
@@ -1040,7 +1042,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 		if ( scope.enabled === false ) return;
 
 		event.preventDefault(); // prevent scrolling
-		event.stopPropagation();
+		// event.stopPropagation(); // tsuji: touchmoveイベントが機能しなくなるためコメント化する
 
 		switch ( state ) {
 

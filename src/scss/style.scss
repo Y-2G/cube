@@ -32,6 +32,12 @@ body {
     bottom: 24px;
     right: 24px;
     cursor: pointer;
+
+    &:active {
+      -webkit-tap-highlight-color: transparent;
+      outline: none;
+    }
+
   }
 
   &__icon--hand {
@@ -52,3 +58,4 @@ body {
     opacity: 0;
   }
 }
+
